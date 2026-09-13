@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView } from 'react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 
 interface RoundedCameraProps {
   onScan?: (data: string) => void;
@@ -28,8 +28,12 @@ export default function RoundedCamera({ onScan, onClose }: RoundedCameraProps) {
   return (
     <View style={styles.container}>
       <CameraView
-        style={StyleSheet.absoluteFillObject}
-        onBarcodeScanned={({ data }) => onScan && onScan(data)}
+        style={StyleSheet.absoluteFill}
+        onBarcodeScanned={(scanningResult: BarcodeScanningResult) => {
+          if (onScan && scanningResult.data) {
+            onScan(scanningResult.data);
+          }
+        }}
         barcodeScannerSettings={{
           barcodeTypes: ['qr', 'ean13', 'ean8', 'code128'],
         }}
