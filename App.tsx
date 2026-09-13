@@ -1,126 +1,86 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView } from 'react-native';
-
-interface Treatment {
-  id: string;
-  name: string;
-  startTime: string;
-  finishTime: string;
-  date: string;
-  status: 'pending' | 'completed' | 'missed';
-}
+import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
+import RoundedCamera from './components/RoundedCamera';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'today' | 'past' | 'future'>('today');
-  const [treatments, setTreatments] = useState<Treatment[]>([]);
-  const [treatmentName, setTreatmentName] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [finishTime, setFinishTime] = useState('');
+  const [activeTab, setActiveTab] = useState<'Today' | 'Past' | 'Future'>('Today');
+  const [isScanning, setIsScanning] = useState(false);
+  const [scannedData, setScannedData] = useState<string | null>(null);
 
-  const todayStr = new Date().toISOString().split('T')[0];
-
-  const addTreatment = () => {
-    if (!treatmentName) return;
-    const newTreatment: Treatment = {
-      id: Date.now().toString(),
-      name: treatmentName,
-      startTime: startTime || '08:00',
-      finishTime: finishTime || '09:00',
-      date: todayStr,
-      status: 'pending',
-    };
-    setTreatments([...treatments, newTreatment]);
-    setTreatmentName('');
-    setStartTime('');
-    setFinishTime('');
-  };
-
-  const toggleStatus = (id: string) => {
-    setTreatments(treatments.map(t => 
-      t.id === id ? { ...t, status: t.status === 'completed' ? 'pending' : 'completed' } : t
-    ));
-  };
+  if (isScanning) {
+    return (
+      <RoundedCamera
+        onScan={(data) => {
+          setScannedData(data);
+          setIsScanning(false);
+        }}
+        onClose={() => setIsScanning(false)}
+      />
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>CareSync Medical Management</Text>
-      
-      <View style={styles.tabRow}>
-        <TouchableOpacity onPress={() => setActiveTab('past')} style={[styles.tab, activeTab === 'past' && styles.activeTab]}>
-          <Text>Past Log</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => setActiveTab('today')} style={[styles.tab, activeTab === 'today' && styles.activeTab]}>
-          <Text>Today</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => setActiveTab('future')} style={[styles.tab, activeTab === 'future' && styles.activeTab]}>
-          <Text>Future Schedule</Text>
-        </TouchableOpacity>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>CareSyncApp</Text>
+        <Text style={styles.headerSubtitle}>Medical Regimen Tracker</Text>
       </View>
 
-      {activeTab === 'today' && (
-        <View style={styles.inputContainer}>
-          <TextInput 
-            placeholder="Treatment Name" 
-            value={treatmentName} 
-            onChangeText={setTreatmentName} 
-            style={styles.input} 
-          />
-          <View style={styles.timeRow}>
-            <TextInput 
-              placeholder="Start (HH:MM)" 
-              value={startTime} 
-              onChangeText={setStartTime} 
-              style={[styles.input, styles.halfInput]} 
-            />
-            <TextInput 
-              placeholder="Finish (HH:MM)" 
-              value={finishTime} 
-              onChangeText={setFinishTime} 
-              style={[styles.input, styles.halfInput]} 
-            />
-          </View>
-          <TouchableOpacity onPress={addTreatment} style={styles.button}>
-            <Text style={styles.buttonText}>Add Treatment</Text>
+      <View style={styles.tabContainer}>
+        {(['Today', 'Past', 'Future'] as const).map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            style={[styles.tabButton, activeTab === tab && styles.activeTabButton]}
+            onPress={() => setActiveTab(tab)}
+          >
+            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>
           </TouchableOpacity>
-        </View>
-      )}
-
-      <ScrollView style={styles.list}>
-        {treatments
-          .filter(t => {
-            if (activeTab === 'today') return t.date === todayStr;
-            if (activeTab === 'past') return t.date < todayStr || t.status === 'completed';
-            return t.date > todayStr;
-          })
-          .map(item => (
-            <View key={item.id} style={styles.card}>
-              <Text style={styles.title}>{item.name}</Text>
-              <Text>Time: {item.startTime} - {item.finishTime}</Text>
-              <Text>Status: {item.status}</Text>
-              <TouchableOpacity onPress={() => toggleStatus(item.id)} style={styles.toggleButton}>
-                <Text>Toggle Completed</Text>
-              </TouchableOpacity>
-            </View>
         ))}
+      </View>
+
+      <ScrollView contentContainerStyle={styles.content}>
+        {activeTab === 'Today' && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Today's Regimen</Text>
+            <Text style={styles.cardBody}>
+              {scannedData ? `Scanned Medication: ${scannedData}` : 'No medications logged for today yet.'}
+            </Text>
+            <TouchableOpacity style={styles.scanButton} onPress={() => setIsScanning(true)}>
+              <Text style={styles.scanButtonText}>Scan Prescription Barcode</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {activeTab === 'Past' && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Historical Logs</Text>
+            <Text style={styles.cardBody}>Review past doses, adherence rates, and historical clinical data.</Text>
+          </View>
+        )}
+        {activeTab === 'Future' && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Upcoming Schedule</Text>
+            <Text style={styles.cardBody}>Manage upcoming refills, future treatments, and recurring reminders.</Text>
+          </View>
+        )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff', paddingTop: 50 },
-  header: { fontSize: 20, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' },
-  tabRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 20 },
-  tab: { padding: 10, borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  activeTab: { borderBottomColor: '#007AFF' },
-  inputContainer: { marginBottom: 20, padding: 10, backgroundColor: '#f9f9f9', borderRadius: 8 },
-  input: { borderWidth: 1, borderColor: '#ccc', padding: 8, borderRadius: 5, marginBottom: 10 },
-  timeRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  halfInput: { width: '48%' },
-  button: { backgroundColor: '#007AFF', padding: 10, borderRadius: 5, alignItems: 'center' },
-  buttonText: { color: '#fff', fontWeight: 'bold' },
-  list: { flex: 1 },
-  card: { padding: 15, backgroundColor: '#f1f1f1', borderRadius: 8, marginBottom: 10 },
-  title: { fontSize: 16, fontWeight: 'bold' },
-  toggleButton: { marginTop: 8, padding: 6, backgroundColor: '#ddd', alignSelf: 'flex-start', borderRadius: 4 }
+  container: { flex: 1, backgroundColor: '#f8fafc' },
+  header: { padding: 20, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#0f172a' },
+  headerSubtitle: { fontSize: 14, color: '#64748b', marginTop: 4 },
+  tabContainer: { flexDirection: 'row', backgroundColor: '#e2e8f0', padding: 4, margin: 16, borderRadius: 12 },
+  tabButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8 },
+  activeTabButton: { backgroundColor: '#ffffff', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 },
+  tabText: { fontSize: 14, fontWeight: '600', color: '#64748b' },
+  activeTabText: { color: '#0f172a' },
+  content: { paddingHorizontal: 16 },
+  card: { backgroundColor: '#ffffff', padding: 20, borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0' },
+  cardTitle: { fontSize: 18, fontWeight: '600', color: '#1e293b', marginBottom: 8 },
+  cardBody: { fontSize: 14, color: '#475569', lineHeight: 20, marginBottom: 16 },
+  scanButton: { backgroundColor: '#0ea5e9', paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  scanButtonText: { color: '#ffffff', fontWeight: '600', fontSize: 14 },
 });
